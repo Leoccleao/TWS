@@ -1,36 +1,44 @@
-library(twsInstrument)
+library(data.table)
+library(TTR)
 library(IBrokers)
 
 # Trader Worksation must be open and logged in
 twsConnect(clientId = 100,port = 7497)
 tws <- twsConnect(clientId = 100,port = 7497)
 
-isConnected(twsconn = tws)
+isConnected(tws)
+
 
 # accountInfo <- reqAccountUpdates(tws, acctCode = "DU2954859")
 # head(accountInfo)
 
-----#### USD.CAD FX pair
+#### USD.CAD FX pair
 ccy <- reqContractDetails(tws, twsCurrency("USD", "CAD"))[[1]]$contract
-----### 
+### 
 #Sample S&P500 reqHistoricalData(tws, reqContractDetails(tws, twsIndex("SPX", "CBOE", "USD"))[[1]]$contract)
 
-### Fetch Historical data
+### Fetch Historical data ### DO NOT TOUCH!!!!
 ## data <- data <- reqHistoricalData(tws, ccy,barSize = "5 mins", endDateTime = "20200902 19:15:00",whatToShow='BID')
 
-data <- data <- reqHistoricalData(tws, ccy,barSize = "5 mins", duration = "6 M" ,whatToShow='BID')     
 
+data <- reqHistoricalData(tws, ccy,barSize = "5 mins", duration = "1 W" ,whatToShow='BID')     
+data <- data.frame(date = index(data), 
+                  data, row.names=NULL)
+base <- data.frame(Date = date(data$date), Time = as.POSIXct(data$date, format = "%H:%M:%S"), 
+                    Open = data$USD.CAD.Open,High = data$USD.CAD.High,
+                   Low = data$USD.CAD.Low, Close = data$USD.CAD.Close,
+                   EMA_9 = EMA(data$USD.CAD.Close,n=9),
+                   EMA_21 = EMA(data$USD.CAD.Close,n=21),
+                   EMA_55 = EMA(data$USD.CAD.Close,n=55))
+base$trend <- ifelse (base$EMA_9 > base$EMA_21 & base$EMA_21 > base$EMA_55,1, 0)#UP 
+base$trend <- ifelse (base$EMA_9 < base$EMA_21 & base$EMA_21 < base$EMA_55,-1, base$trend)#DOWN
+baserapida <- tail(base,200)
+baserapida <- EMA_3(baserapida)
+baserapida <- entryprice_hist(baserapida) 
 
-### Data cleaning
+     
+     
+     
 
-data <- as.data.frame(data)
-data$date = rownames(data)
-rownames(data) = NULL
-library("lubridate")
-data$date <- ymd_hms(data$date)
-col_order <- c(9, 1,2,3,4)
-data <- data[, col_order]
-View(data)
-#------------
      
      
